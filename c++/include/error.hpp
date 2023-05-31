@@ -6,5 +6,6 @@
 using namespace std;
 
 void panic(string msg);
+void invalidSyntax(string str, int index, int len = 1);
 
 #endif

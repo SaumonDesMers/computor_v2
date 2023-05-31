@@ -7,6 +7,7 @@
 using namespace std;
 
 struct Lexer {
+	string input;
 	TokenList tokens;
 
 	Lexer(string const &str);

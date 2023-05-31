@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <bitset>
 #include "error.hpp"
 #include "token.hpp"
 #include "lexer.hpp"
@@ -17,6 +18,8 @@ int main(int ac, char *av[]) {
 	log(lex.tokens);
 
 	AstTree ast(lex);
+
+	cout << ast.root->to_string() << endl;
 
 	return 0;
 }

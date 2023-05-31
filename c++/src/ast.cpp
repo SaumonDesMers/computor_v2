@@ -1,102 +1,154 @@
 #include <cstring>
 #include <algorithm>
+#include <list>
 #include "ast.hpp"
 #include "error.hpp"
 
-// class AstNode
-AstNode::AstNode(Token _token, AstNode *_left, AstNode *_right): token(_token), left(_left), right(_right) {}
+// ##############################################################################
+// #                                                                            #
+// #                                Class AstNode                               #
+// #                                                                            #
+// ##############################################################################
 
-// class AstTree
-AstTree::AstTree(Lexer &lex) {
-	vector<Token> tokens = lex.tokens;
-	this->separateParenthesis(tokens);
+AstNode::AstNode(): token(Token()), left(NULL), right(NULL), brace(false) {}
+AstNode::AstNode(Token _token, AstNode *_left = NULL, AstNode *_right = NULL, bool _brace = false)
+	: token(_token), left(_left), right(_right), brace(_brace) {}
+
+AstNode::~AstNode() {
+	delete this->left;
+	delete this->right;
 }
 
-void AstTree::separateParenthesis(TokenList &tokens) {
-	vector<pair<Token, int>> tokenDepth;
-	for (Token const &t: tokens)
-		tokenDepth.push_back(make_pair(t, 0));
+void AstNode::log(int depth) {
+	cout << string(depth, '\t')
+		<< "{raw: " << this->token.raw
+		<< ", left: " << (this->left ? this->left->token.raw : "null")
+		<< ", right: " << (this->right ? this->right->token.raw : "null")
+		<< "}" << endl;
+	if (this->left)
+		this->left->log(depth+1);
+	if (this->right)
+		this->right->log(depth+1);
+}
 
-	int depth = 0;
-	int maxDepth = 0;
+string AstNode::to_string() {
+	string str = "";
+	if (this->brace)
+		str += "(";
+	if (this->left)
+		str += this->left->to_string() + " ";
+	str += this->token.raw;
+	if (this->right)
+		str += " " + this->right->to_string();
+	if (this->brace)
+		str += ")";
+	return str;
+}
 
-	for (size_t i = 0; i < tokens.size(); i++) {
-		if (tokens[i].type == LPAR) {
-			depth++;
-			maxDepth = max(maxDepth, depth);
-		}
-		tokenDepth[i].second = depth;
-		if (tokens[i].type == RPAR)
-			depth--;
-	}
+// ##############################################################################
+// #                                                                            #
+// #                                Class AstTree                               #
+// #                                                                            #
+// ##############################################################################
 
-	for (auto &pair: tokenDepth)
-		cout << pair.first.raw;
-	cout << endl;
-	for (auto &pair: tokenDepth)
-		cout << char(pair.second == 0 ? ' ' : pair.second+48);
-	cout << endl;
+AstTree::AstTree(Lexer &lex): root(NULL), lexer(lex) {
+	try {
+		list<AstNode *> nodeList = this->getNodeList(lex.tokens);
+		this->root = this->parseToken(nodeList);
 
-	int subTreeId = 0;
-
-	// for each depth
-	while (maxDepth > 0) {
-
-		// for each set of same depth
-		while (true) {
-			auto it = find_if(tokenDepth.begin(), tokenDepth.end(), [maxDepth](pair<Token, int> &p) { return p.second == maxDepth; });
-			auto ite = find_if(it, tokenDepth.end(), [maxDepth](pair<Token, int> &p) { return p.second != maxDepth; });
-
-			if (it == tokenDepth.end()) {
-				maxDepth--;
-				break;
-			}
-
-			TokenList subTokenList;
-			for (auto i = it; i < ite; i++)
-				subTokenList.push_back(i->first);
-			
-			Token token(subTokenList, "st" + to_string(subTreeId++));
-
-			cout << token.raw << ": ";
-			for (auto iter = token.tokens.begin(); iter < token.tokens.end(); iter++)
-				cout << iter->raw;
-			cout << endl;
-
-			auto pos = it - tokenDepth.begin()	;
-
-			tokenDepth.erase(it, ite);
-
-			tokenDepth.insert(tokenDepth.begin() + pos, make_pair(token, maxDepth-1));
-		}
+		// remove brace from root node
+		this->root->brace = false;
 		
+	} catch (string err) {
+		panic(err);
 	}
-
 }
 
-// (7 + 3) * (10 / (12 / (3 + 1) - 1))
-// 1     1   1     2     3     3    21
+AstTree::~AstTree() {
+	delete this->root;
+}
 
-// st1 * (10 / (12 / st2 - 1))
-//       1     2            21
-// st1 = (7 + 3)
-// st2 = (3 + 1)
+list<AstNode *> AstTree::getNodeList(TokenList &tokens) {
+	list<AstNode *> nodeList;
 
-// st1 * (10 / st3)
-//       1        1
-// st1 = (7 + 3)
-// st2 = (3 + 1)
-// st3 = (12 / st2 - 1)
+	for (Token &token: tokens)
+		nodeList.push_back(new AstNode(token));
 
-// st1 * st4
-// st1 = (7 + 3)
-// st2 = (3 + 1)
-// st3 = (12 / st2 - 1)
-// st4 = (10 / st3)
+	return nodeList;
+}
 
-// st1 * st4
-// st1 = (7 + 3)
-// st2 = (3 + 1)
-// st3 = (st5 - 1)
-// st4 = (10 / st3)
-// st5 = 12 / st2
+AstNode *AstTree::parseToken(list<AstNode *> nodeList) {
+
+	while (true) {
+		
+		// find the first brace
+		auto firstBrace_it = find_if(nodeList.begin(), nodeList.end(), [](AstNode *node) {
+			return node->token.type & BRACE;
+		});
+
+		// if there is no brace, go to the parsing
+		if (firstBrace_it == nodeList.end())
+			break;
+
+		// error if first brace is a right brace
+		if ((*firstBrace_it)->token.type == RBRACE)
+			invalidSyntax(this->lexer.input, (*firstBrace_it)->token.index);
+
+		// find matching right brace (e.i. the next right brace with the same depth)
+		auto matchingEndBrace_it = nodeList.end();
+		int depth = -1;
+		for (auto it = firstBrace_it; it != nodeList.end(); it++) {
+			AstNode *node = *it;
+			if (node->token.type == LBRACE)
+				depth++;
+			else if (node->token.type == RBRACE) {
+				if (depth == 0) {
+					matchingEndBrace_it = it;
+					break;
+				} else
+					depth--;
+			}
+		}
+
+		// error if there is no matching brace
+		if (matchingEndBrace_it == nodeList.end())
+			invalidSyntax(this->lexer.input, (*firstBrace_it)->token.index);
+		
+		// recursion with the nested braces
+		AstNode *node = this->parseToken(list<AstNode *>(++firstBrace_it, matchingEndBrace_it));
+
+		if (node == NULL)
+			panic("ParseToken return NULL.");
+
+		// replace nested braces with the root node
+		nodeList.erase(--firstBrace_it, ++matchingEndBrace_it);
+		nodeList.insert(matchingEndBrace_it, node);
+
+	}
+
+	// filter from the nodes the operators which has been parsed yet (e.i. those who don't have childs)
+	vector<list<AstNode *>::iterator> operators;
+	for (auto it = nodeList.begin(); it != nodeList.end(); it++)
+		if ((*it)->token.type & OPERATOR && (*it)->left == NULL)
+			operators.push_back(it);
+	
+	// sort operator by priority
+	sort(operators.begin(), operators.end(), [](auto it1, auto it2) {
+		return priority((*it1)->token.type) > priority((*it2)->token.type);
+	});
+
+	// for each operator in order of priority, remove its neighbours from the list and put them as its childs
+	for (auto &it: operators) {
+		auto prev = it; prev--;
+		auto next = it; next++;
+		(*it)->left = *prev;
+		(*it)->right = *next;
+		nodeList.erase(prev);
+		nodeList.erase(next);
+	}
+
+	// put brace around the tree
+	(*nodeList.begin())->brace = true;
+
+	return *nodeList.begin();
+}

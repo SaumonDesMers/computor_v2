@@ -1,24 +1,44 @@
 #include "lexer.hpp"
 #include "error.hpp"
 
-Lexer::Lexer(string const &str) {
+Lexer::Lexer(string const &str): input(str) {
 	this->detectToken(str);
 }
 
-void Lexer::detectToken(string const &str) {
-	for (size_t i=0; i < str.size(); i++) {
+static TokenType basicCharToTokenType(char c) {
+	switch (c) {
+		case '+': return PLUS;
+		case '-': return MINUS;
+		case '*': return MULT;
+		case '/': return DIV;
+		case '%': return MOD;
+		case '(': return LBRACE;
+		case ')': return RBRACE;
+		case '[': return LHOOK;
+		case ']': return RHOOK;
+		case ',': return COMMA;
+		case ';': return SEMICOLON;
+		case '=': return EQUAL;
+		case '?': return QUESTION;
+		case '^': return POWER;
+	}
+	return NONE;
+}
+
+void Lexer::detectToken(string const &input) {
+	for (size_t i=0; i < input.size(); i++) {
 
 		// escape whitespace
-		if (isspace(str[i]))
+		if (isspace(input[i]))
 			continue;
 
 		// detect number
 		int j = 0;
-		while (isdigit(str[i])) {
-			if (isdigit(str[i+j]) || str[i+j] == '.')
+		while (isdigit(input[i])) {
+			if (isdigit(input[i+j]) || input[i+j] == '.')
 				j++;
 			else if (j > 0) {
-				tokens.push_back(Token(str.substr(i, j), NUMBER));
+				tokens.push_back(Token(input.substr(i, j), i, NUMBER));
 				i += j-1;
 				break;
 			}
@@ -27,12 +47,12 @@ void Lexer::detectToken(string const &str) {
 
 		// detect variable/function name
 		j = 0;
-		while (isalpha(str[i])) {
-			if (isalpha(str[i+j]))
+		while (isalpha(input[i])) {
+			if (isalpha(input[i+j]))
 				j++;
 			else if (j > 0) {
-				string raw = str.substr(i, j);
-				tokens.push_back(Token(raw, raw == "i" ? I : VAR));
+				string raw = input.substr(i, j);
+				tokens.push_back(Token(raw, i, raw == "i" ? I : VAR));
 				i += j-1;
 				break;
 			}
@@ -40,29 +60,20 @@ void Lexer::detectToken(string const &str) {
 		if (j > 0) continue;
 
 		// detect matrix multiplication
-		if (str[i] == '*' && str[i+1] == '*') {
-			tokens.push_back(Token("**", MATMULT));
+		if (input[i] == '*' && input[i+1] == '*') {
+			tokens.push_back(Token("**", i, MATMULT));
 			i++;
 			continue;
 		}
 
 		// detect basic tokens
-		char basic_tokens[] = { '+', '-', '*', '/', '%', '(', ')', '[', ']', ',', ';', '=', '?', '^' };
-		j = 0;
-		while (j < 14) {
-			if (str[i] == basic_tokens[j]) {
-				tokens.push_back(Token(str[i], TokenType(j)));
-				break;
-			}
-			j++;
+		TokenType type = basicCharToTokenType(input[i]);
+		if (type != NONE) {
+			tokens.push_back(Token(input[i], i, type));
+			continue;
 		}
-		if (j != 14) continue;
 		
 		// error
-		panic(
-			"Unexpected syntax:\n"
-			+ str + "\n"
-			+ string(i, ' ') + "\033[31m" + string(1, '^') + "\033[0m"
-		);
+		invalidSyntax(input, i);
 	}
 }
