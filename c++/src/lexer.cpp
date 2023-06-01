@@ -2,7 +2,7 @@
 #include "error.hpp"
 
 Lexer::Lexer(string const &str): input(str) {
-	this->detectToken(str);
+	this->detectBasicToken(str);
 }
 
 static TokenType basicCharToTokenType(char c) {
@@ -25,7 +25,7 @@ static TokenType basicCharToTokenType(char c) {
 	return NONE;
 }
 
-void Lexer::detectToken(string const &input) {
+void Lexer::detectBasicToken(string const &input) {
 	for (size_t i=0; i < input.size(); i++) {
 
 		// escape whitespace
@@ -38,7 +38,7 @@ void Lexer::detectToken(string const &input) {
 			if (isdigit(input[i+j]) || input[i+j] == '.')
 				j++;
 			else if (j > 0) {
-				tokens.push_back(Token(input.substr(i, j), i, NUMBER));
+				this->tokens.push_back(Token(input.substr(i, j), i, NUMBER));
 				i += j-1;
 				break;
 			}
@@ -52,7 +52,7 @@ void Lexer::detectToken(string const &input) {
 				j++;
 			else if (j > 0) {
 				string raw = input.substr(i, j);
-				tokens.push_back(Token(raw, i, raw == "i" ? I : VAR));
+				this->tokens.push_back(Token(raw, i, raw == "i" ? I : VAR));
 				i += j-1;
 				break;
 			}
@@ -61,7 +61,7 @@ void Lexer::detectToken(string const &input) {
 
 		// detect matrix multiplication
 		if (input[i] == '*' && input[i+1] == '*') {
-			tokens.push_back(Token("**", i, MATMULT));
+			this->tokens.push_back(Token("**", i, MATMULT));
 			i++;
 			continue;
 		}
@@ -69,7 +69,7 @@ void Lexer::detectToken(string const &input) {
 		// detect basic tokens
 		TokenType type = basicCharToTokenType(input[i]);
 		if (type != NONE) {
-			tokens.push_back(Token(input[i], i, type));
+			this->tokens.push_back(Token(input[i], i, type));
 			continue;
 		}
 		

@@ -1,0 +1,42 @@
+
+### regle generales ###
+
+	equation => suite d'operand, d'operator et de parentheses
+		toutes variables presentent dans l'equation doivent etre definies (dans l'env ou en argument de fonction)
+	
+	operator => + - * / % ** ^
+
+	operand:
+		variable:
+			nombre complex
+			matrice
+		fonction
+		valeur:
+			nombre complex
+			matrice
+
+
+
+	variable = equation
+		variable peut exister ou pas
+		variable est defnie et prends le resultat du equation
+
+	fonction ( variable ) = equation
+		fonction peut exister ou pas
+		fonction est defini et prends le resultat du equation
+		variable de doit pas exister (si variable existe alors lhs est une equation)
+		variable est defini dans le scope de la fonction (sans valeur)
+
+	fonction ( variable ) = equation ?
+		fonction doit exister
+		variable ne doit pas exister (si variable existe alors lhs est une equation)
+		/!\ equation ne peux pas resoudre ses variables avec l'argument de la fonction
+
+	equation = ?
+		on affiche le resultat du equation
+
+
+
+### regle du lexing ###
+
+	

@@ -12,7 +12,7 @@ struct Lexer {
 
 	Lexer(string const &str);
 
-	void detectToken(string const &str);
+	void detectBasicToken(string const &str);
 
 };
 

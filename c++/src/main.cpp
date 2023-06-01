@@ -17,7 +17,7 @@ int main(int ac, char *av[]) {
 	Lexer lex(av[1]);
 	log(lex.tokens);
 
-	AstTree ast(lex);
+	Ast ast(lex);
 
 	cout << ast.root->to_string() << endl;
 

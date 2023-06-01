@@ -6,29 +6,29 @@
 #include "token.hpp"
 #include "lexer.hpp"
 
-struct AstNode {
+struct Node {
 	Token token;
-	AstNode *left;
-	AstNode *right;
+	Node *left;
+	Node *right;
 	bool brace;
 
-	AstNode();
-	AstNode(Token _token, AstNode *_left, AstNode *_right, bool _brace);
-	~AstNode();
+	Node();
+	Node(Token _token, Node *_left, Node *_right, bool _brace);
+	~Node();
 
 	void log(int depth);
 	string to_string();
 };
 
-struct AstTree {
-	AstNode *root;
+struct Ast {
+	Node *root;
 	Lexer lexer;
 
-	AstTree(Lexer &lex);
-	~AstTree();
+	Ast(Lexer &lex);
+	~Ast();
 
-	list<AstNode *> getNodeList(TokenList &tokens);
-	AstNode *parseToken(list<AstNode *> nodeList);
+	list<Node *> getNodeList(TokenList &tokens);
+	Node *parseToken(list<Node *> nodeList);
 };
 
 #endif

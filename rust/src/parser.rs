@@ -1,8 +1,8 @@
 use crate::lexer::Token;
 
-pub struct AstNode {
+pub struct Node {
 	token: Token,
-	left: AstNode,
-	right: AstNode
+	left: Node,
+	right: Node
 }
 

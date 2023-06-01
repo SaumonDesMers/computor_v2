@@ -6,20 +6,20 @@
 
 // ##############################################################################
 // #                                                                            #
-// #                                Class AstNode                               #
+// #                                 Class Node                                 #
 // #                                                                            #
 // ##############################################################################
 
-AstNode::AstNode(): token(Token()), left(NULL), right(NULL), brace(false) {}
-AstNode::AstNode(Token _token, AstNode *_left = NULL, AstNode *_right = NULL, bool _brace = false)
+Node::Node(): token(Token()), left(NULL), right(NULL), brace(false) {}
+Node::Node(Token _token, Node *_left = NULL, Node *_right = NULL, bool _brace = false)
 	: token(_token), left(_left), right(_right), brace(_brace) {}
 
-AstNode::~AstNode() {
+Node::~Node() {
 	delete this->left;
 	delete this->right;
 }
 
-void AstNode::log(int depth) {
+void Node::log(int depth) {
 	cout << string(depth, '\t')
 		<< "{raw: " << this->token.raw
 		<< ", left: " << (this->left ? this->left->token.raw : "null")
@@ -31,7 +31,7 @@ void AstNode::log(int depth) {
 		this->right->log(depth+1);
 }
 
-string AstNode::to_string() {
+string Node::to_string() {
 	string str = "";
 	if (this->brace)
 		str += "(";
@@ -47,13 +47,13 @@ string AstNode::to_string() {
 
 // ##############################################################################
 // #                                                                            #
-// #                                Class AstTree                               #
+// #                                 Class Ast                                  #
 // #                                                                            #
 // ##############################################################################
 
-AstTree::AstTree(Lexer &lex): root(NULL), lexer(lex) {
+Ast::Ast(Lexer &lex): root(NULL), lexer(lex) {
 	try {
-		list<AstNode *> nodeList = this->getNodeList(lex.tokens);
+		list<Node *> nodeList = this->getNodeList(lex.tokens);
 		this->root = this->parseToken(nodeList);
 
 		// remove brace from root node
@@ -64,25 +64,25 @@ AstTree::AstTree(Lexer &lex): root(NULL), lexer(lex) {
 	}
 }
 
-AstTree::~AstTree() {
+Ast::~Ast() {
 	delete this->root;
 }
 
-list<AstNode *> AstTree::getNodeList(TokenList &tokens) {
-	list<AstNode *> nodeList;
+list<Node *> Ast::getNodeList(TokenList &tokens) {
+	list<Node *> nodeList;
 
 	for (Token &token: tokens)
-		nodeList.push_back(new AstNode(token));
+		nodeList.push_back(new Node(token));
 
 	return nodeList;
 }
 
-AstNode *AstTree::parseToken(list<AstNode *> nodeList) {
+Node *Ast::parseToken(list<Node *> nodeList) {
 
 	while (true) {
 		
 		// find the first brace
-		auto firstBrace_it = find_if(nodeList.begin(), nodeList.end(), [](AstNode *node) {
+		auto firstBrace_it = find_if(nodeList.begin(), nodeList.end(), [](Node *node) {
 			return node->token.type & BRACE;
 		});
 
@@ -98,7 +98,7 @@ AstNode *AstTree::parseToken(list<AstNode *> nodeList) {
 		auto matchingEndBrace_it = nodeList.end();
 		int depth = -1;
 		for (auto it = firstBrace_it; it != nodeList.end(); it++) {
-			AstNode *node = *it;
+			Node *node = *it;
 			if (node->token.type == LBRACE)
 				depth++;
 			else if (node->token.type == RBRACE) {
@@ -115,7 +115,7 @@ AstNode *AstTree::parseToken(list<AstNode *> nodeList) {
 			invalidSyntax(this->lexer.input, (*firstBrace_it)->token.index);
 		
 		// recursion with the nested braces
-		AstNode *node = this->parseToken(list<AstNode *>(++firstBrace_it, matchingEndBrace_it));
+		Node *node = this->parseToken(list<Node *>(++firstBrace_it, matchingEndBrace_it));
 
 		if (node == NULL)
 			panic("ParseToken return NULL.");
@@ -127,7 +127,7 @@ AstNode *AstTree::parseToken(list<AstNode *> nodeList) {
 	}
 
 	// filter from the nodes the operators which has been parsed yet (e.i. those who don't have childs)
-	vector<list<AstNode *>::iterator> operators;
+	vector<list<Node *>::iterator> operators;
 	for (auto it = nodeList.begin(); it != nodeList.end(); it++)
 		if ((*it)->token.type & OPERATOR && (*it)->left == NULL)
 			operators.push_back(it);

@@ -6,6 +6,9 @@
 
 using namespace std;
 
+#define PRIORITY 0b00000000000000000000111000000000 // operator priority mask
+#define priority(type) (type & PRIORITY)
+
 enum TokenType {
 	OPERATOR	= 0b11111110000000000000000000000000, // operator mask
 	PLUS		= 0b10000000000000000000001000000000, // +
@@ -36,9 +39,6 @@ enum TokenType {
 	SUBTREE		= 0b00000000000000000010000000000000,
 	NONE		= 0b00000000000000000001000000000000,
 };
-
-#define PRIORITY 0b00000000000000000000111000000000 // operator priority mask
-#define priority(type) (type & PRIORITY)
 
 string tokenTypeToStr(TokenType type);
 
